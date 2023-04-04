@@ -66,6 +66,9 @@ private:
     ComRobot robot;
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
+
+    // INSA
+    char WD_ON = 0;
     
     /**********************************************************************/
     /* Tasks                                                              */
@@ -76,6 +79,9 @@ private:
     RT_TASK th_openComRobot;
     RT_TASK th_startRobot;
     RT_TASK th_move;
+    // INSA
+    RT_TASK th_reload_wd;
+    RT_TASK th_battery;
     
     /**********************************************************************/
     /* Mutex                                                              */
@@ -92,6 +98,8 @@ private:
     RT_SEM sem_openComRobot;
     RT_SEM sem_serverOk;
     RT_SEM sem_startRobot;
+    RT_SEM sem_watchdog; //insa
+    RT_SEM sem_battery; //insa
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -131,6 +139,10 @@ private:
      * @brief Thread handling control of the robot.
      */
     void MoveTask(void *arg);
+
+    // INSA
+    void PeriodicReloadWD(void  *arg);
+    void PeriodicBattery(void *arg);
     
     /**********************************************************************/
     /* Queue services                                                     */

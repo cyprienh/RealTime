@@ -26,6 +26,8 @@
 #define PRIORITY_TRECEIVEFROMMON 25
 #define PRIORITY_TSTARTROBOT 20
 #define PRIORITY_TCAMERA 21
+#define PRIORITY_TRELOADWD 19 // INSA
+#define PRIORITY_TBATTERY 26 // INSA
 
 /*
  * Some remarks:
@@ -94,6 +96,14 @@ void Tasks::Init() {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_sem_create(&sem_watchdog, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_sem_create(&sem_battery, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Semaphores created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -123,6 +133,15 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_task_create(&th_reload_wd, "th_reload_wd", 0, PRIORITY_TRELOADWD, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_create(&th_battery, "th_battery", 0, PRIORITY_TBATTERY, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+
     cout << "Tasks created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -167,7 +186,14 @@ void Tasks::Run() {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-
+    if (err = rt_task_start(&th_reload_wd, (void(*)(void*)) &Tasks::PeriodicReloadWD, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_start(&th_battery, (void(*)(void*)) &Tasks::PeriodicBattery, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Tasks launched" << endl << flush;
 }
 
@@ -265,7 +291,13 @@ void Tasks::ReceiveFromMonTask(void *arg) {
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_COM_OPEN)) {
             rt_sem_v(&sem_openComRobot);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITHOUT_WD)) {
+            WD_ON = 0;
             rt_sem_v(&sem_startRobot);
+        } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITH_WD)) {
+            WD_ON = 1;
+            rt_sem_v(&sem_startRobot);
+        } else if (msgRcv->CompareID(MESSAGE_ROBOT_BATTERY_GET)) {
+            rt_sem_v(&sem_battery);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_GO_FORWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_BACKWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_LEFT) ||
@@ -313,6 +345,58 @@ void Tasks::OpenComRobot(void *arg) {
     }
 }
 
+// INSA
+void Tasks::PeriodicReloadWD(void *arg) { // FONCTIONALITE 11
+    int err;
+    rt_sem_p(&sem_watchdog, TM_INFINITE);
+    err = rt_task_set_periodic(NULL, TM_NOW, 1000000000);
+
+    if(err) {
+        printf("error on set periodic, %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
+
+    while(1) {
+        err = rt_task_wait_period(NULL);
+        if(err) {
+            printf("error task wait, %s\n ", strerror (-err));
+            break;
+        }
+        rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+        robot.Write(robot.ReloadWD());
+        rt_mutex_release(&mutex_robot);
+    }
+}
+
+void Tasks::PeriodicBattery(void *arg) { // FONCTIONALITE 13
+    int err;
+    Message* msg;
+    rt_sem_p(&sem_battery, TM_INFINITE);
+    err = rt_task_set_periodic(NULL, TM_NOW, 500000000);
+
+    if(err) {
+        printf("error on set periodic, %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
+
+    while(1) {
+        err = rt_task_wait_period(NULL);
+        if(err) {
+            printf("error task wait, %s\n ", strerror (-err));
+            break;
+        }
+        rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+        msg = robot.Write(robot.GetBattery());
+        rt_mutex_release(&mutex_robot);
+        
+        rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+        monitor.Write(msg);
+        rt_mutex_release(&mutex_monitor);
+
+        
+    }
+}
+
 /**
  * @brief Thread starting the communication with the robot.
  */
@@ -327,13 +411,25 @@ void Tasks::StartRobotTask(void *arg) {
     while (1) {
 
         Message * msgSend;
+        int err;
         rt_sem_p(&sem_startRobot, TM_INFINITE);
-        cout << "Start robot without watchdog (";
-        rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-        msgSend = robot.Write(robot.StartWithoutWD());
-        rt_mutex_release(&mutex_robot);
-        cout << msgSend->GetID();
-        cout << ")" << endl;
+
+        if(!WD_ON) {
+            cout << "Start robot without watchdog (";
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            msgSend = robot.Write(robot.StartWithoutWD());
+            rt_mutex_release(&mutex_robot);
+            cout << msgSend->GetID();
+            cout << ")" << endl;
+        } else { // FONCTIONALITE 11
+            rt_sem_broadcast(&sem_watchdog);
+            cout << "Start robot with watchdog (";
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            msgSend = robot.Write(robot.StartWithWD());
+            rt_mutex_release(&mutex_robot);
+            cout << msgSend->GetID();
+            cout << ")" << endl;
+        }
 
         cout << "Movement answer: " << msgSend->ToString() << endl << flush;
         WriteInQueue(&q_messageToMon, msgSend);  // msgSend will be deleted by sendToMon
