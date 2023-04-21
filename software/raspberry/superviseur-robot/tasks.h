@@ -69,6 +69,8 @@ private:
 
     // INSA
     char WD_ON = 0;
+    char COUNT_ERROR = 0;
+    Camera *camera = new Camera(sm, 5);
     
     /**********************************************************************/
     /* Tasks                                                              */
@@ -82,6 +84,9 @@ private:
     // INSA
     RT_TASK th_reload_wd;
     RT_TASK th_battery;
+    RT_TASK th_camera;
+    RT_TASK th_cameraOpen;
+    RT_TASK th_cameraClose;
     
     /**********************************************************************/
     /* Mutex                                                              */
@@ -90,6 +95,7 @@ private:
     RT_MUTEX mutex_robot;
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
+    RT_MUTEX mutex_camera;
 
     /**********************************************************************/
     /* Semaphores                                                         */
@@ -100,6 +106,9 @@ private:
     RT_SEM sem_startRobot;
     RT_SEM sem_watchdog; //insa
     RT_SEM sem_battery; //insa
+    RT_SEM sem_camera; //insa
+    RT_SEM sem_cameraOpen; //insa
+    RT_SEM sem_cameraClose; //insa
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -143,6 +152,11 @@ private:
     // INSA
     void PeriodicReloadWD(void  *arg);
     void PeriodicBattery(void *arg);
+    void CameraSend(void *arg);
+    void CameraOpen();
+    void CameraClose();
+
+    Message *checkComError(Message *msg);
     
     /**********************************************************************/
     /* Queue services                                                     */

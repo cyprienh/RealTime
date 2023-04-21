@@ -157,7 +157,7 @@ protected:
      * Serial link file descriptor
      */
     int fd;
-
+    
     /**
      * Get an answer from robot
      * @return String containing answer from robot
