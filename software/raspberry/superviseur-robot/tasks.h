@@ -160,6 +160,8 @@ private:
     void CameraOpen();
     void CameraClose();
     void FindArena();
+    void ArenaKO();
+    void ArenaKO();
 
     Message *checkComError(Message *msg);
     

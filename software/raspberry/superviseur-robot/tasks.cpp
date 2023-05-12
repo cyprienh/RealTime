@@ -356,6 +356,10 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             Tasks::CameraClose();
         } else if (msgRcv->CompareID(MESSAGE_CAM_ASK_ARENA)){
             Tasks::FindArena();
+        } else if (msgRcv->CompareID(MESSAGE_CAM_ARENA_CONFIRM)){
+            Tasks::ArenaOK();
+        } else if (msgRcv->CompareID(MESSAGE_CAM_ARENA_INFIRM)){
+            Tasks::ArenaKO();
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_GO_FORWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_BACKWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_LEFT) ||
@@ -577,6 +581,16 @@ void Tasks::FindArena() {
         WriteInQueue(&q_messageToMon, msgImg);
     }
 }
+
+void Tasks::ArenaOK() {
+    CAN_SEND_IMG = 1;
+}
+    
+void Tasks::ArenaKO() {
+    arena = NULL;
+    CAN_SEND_IMG = 1;
+}
+
 
 
 /**
