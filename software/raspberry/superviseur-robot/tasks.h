@@ -73,6 +73,7 @@ private:
     char CAN_SEND_IMG = 1;
     Camera *camera = new Camera(sm, 5);
     Arena arena;
+    Arena arena_temp;
     
     /**********************************************************************/
     /* Tasks                                                              */
@@ -160,7 +161,7 @@ private:
     void CameraOpen();
     void CameraClose();
     void FindArena();
-    void ArenaKO();
+    void ArenaOK();
     void ArenaKO();
 
     Message *checkComError(Message *msg);
