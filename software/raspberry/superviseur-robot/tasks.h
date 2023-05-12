@@ -72,7 +72,7 @@ private:
     char COUNT_ERROR = 0;
     char CAN_SEND_IMG = 1;
     Camera *camera = new Camera(sm, 5);
-    Arena *arena = new Arena();
+    Arena arena;
     
     /**********************************************************************/
     /* Tasks                                                              */

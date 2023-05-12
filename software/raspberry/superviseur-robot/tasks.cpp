@@ -515,11 +515,11 @@ void Tasks::CameraSend(void *arg) { // FONCTIONALITE 15
         }
 
     while(1) {
+	rt_task_wait_period(NULL);
         if (CAN_SEND_IMG) {
-            rt_task_wait_period(NULL);
             rt_mutex_acquire(&mutex_camera, TM_INFINITE);
             open = camera->IsOpen();
-	        rt_mutex_release(&mutex_camera);
+	    rt_mutex_release(&mutex_camera);
             if (open) {
                 rt_mutex_acquire(&mutex_camera, TM_INFINITE);
                 img = new Img(camera->Grab());
@@ -559,18 +559,20 @@ void Tasks::CameraClose() {   // FONCTIONALITE 16
 void Tasks::FindArena() {
     Img *img;
     MessageImg *msgImg;
-    
+    printf("\nFIND ARENA NOW!!\n");    
     CAN_SEND_IMG = 0;
     rt_mutex_acquire(&mutex_camera, TM_INFINITE);
     img = new Img(camera->Grab());
     rt_mutex_release(&mutex_camera);
-    arena = img.SearchArena();
-    if (arena->IsEmpty()) {
+    arena = img->SearchArena();
+    if (arena.IsEmpty()) {
+	printf("\nARENA NOT FOUND!\n");
         rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
         monitor.Write(new Message(MESSAGE_ANSWER_NACK));
         rt_mutex_release(&mutex_monitor);
     } else {
-        img.drawArena(arena);
+	printf("\nARENA FOUND!!!!!\n");
+        img->DrawArena(arena);
         msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
         WriteInQueue(&q_messageToMon, msgImg);
     }
