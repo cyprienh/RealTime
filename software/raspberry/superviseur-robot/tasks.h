@@ -70,7 +70,9 @@ private:
     // INSA
     char WD_ON = 0;
     char COUNT_ERROR = 0;
+    char CAN_SEND_IMG = 1;
     Camera *camera = new Camera(sm, 5);
+    Arena *arena = new Arena();
     
     /**********************************************************************/
     /* Tasks                                                              */
@@ -87,6 +89,7 @@ private:
     RT_TASK th_camera;
     RT_TASK th_cameraOpen;
     RT_TASK th_cameraClose;
+    RT_TASK th_arena;
     
     /**********************************************************************/
     /* Mutex                                                              */
@@ -109,6 +112,7 @@ private:
     RT_SEM sem_camera; //insa
     RT_SEM sem_cameraOpen; //insa
     RT_SEM sem_cameraClose; //insa
+    RT_SEM sem_arena; //insa
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -155,6 +159,7 @@ private:
     void CameraSend(void *arg);
     void CameraOpen();
     void CameraClose();
+    void FindArena();
 
     Message *checkComError(Message *msg);
     

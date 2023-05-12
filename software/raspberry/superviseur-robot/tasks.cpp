@@ -22,13 +22,15 @@
 #define PRIORITY_TSERVER 30
 #define PRIORITY_TOPENCOMROBOT 20
 #define PRIORITY_TMOVE 20
-#define PRIORITY_TSENDTOMON 22
+#define PRIORITY_TSENDTOMON 21
 #define PRIORITY_TRECEIVEFROMMON 25
 #define PRIORITY_TSTARTROBOT 20
 #define PRIORITY_TCAMERA 23
-#define PRIORITY_TCAMERAOPENCLOSE 27
+#define PRIORITY_TCAMERAOPENCLOSE 27 // useless?
 #define PRIORITY_TRELOADWD 28 // INSA
 #define PRIORITY_TBATTERY 15 // INSA
+#define PRIORITY_TARENA 22 // INSA
+
 /*
  * Some remarks:
  * 1- This program is mostly a template. It shows you how to create tasks, semaphore
@@ -79,6 +81,7 @@ void Tasks::Init() {
         cerr << "Error mutex create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    
     cout << "Mutexes created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -109,6 +112,10 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_sem_create(&sem_camera, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_sem_create(&sem_arena, NULL, 0, S_FIFO)) {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -166,6 +173,10 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_task_create(&th_cameraClose, "th_cameraClose", 0, PRIORITY_TCAMERAOPENCLOSE, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_create(&th_arena, "th_arena", 0, PRIORITY_TARENA, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -343,6 +354,8 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             Tasks::CameraOpen();
         } else if (msgRcv->CompareID(MESSAGE_CAM_CLOSE)){
             Tasks::CameraClose();
+        } else if (msgRcv->CompareID(MESSAGE_CAM_ASK_ARENA)){
+            Tasks::FindArena();
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_GO_FORWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_BACKWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_LEFT) ||
@@ -502,18 +515,19 @@ void Tasks::CameraSend(void *arg) { // FONCTIONALITE 15
         }
 
     while(1) {
-        rt_task_wait_period(NULL);
-        rt_mutex_acquire(&mutex_camera, TM_INFINITE);
-        open = camera->IsOpen();
-	rt_mutex_release(&mutex_camera);
-        if (open) {
-	  rt_mutex_acquire(&mutex_camera, TM_INFINITE);
-            img = new Img(camera->Grab());
-	    rt_mutex_release(&mutex_camera);
-            msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
-            WriteInQueue(&q_messageToMon, msgImg);
+        if (CAN_SEND_IMG) {
+            rt_task_wait_period(NULL);
+            rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+            open = camera->IsOpen();
+	        rt_mutex_release(&mutex_camera);
+            if (open) {
+                rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+                img = new Img(camera->Grab());
+                rt_mutex_release(&mutex_camera);
+                msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
+                WriteInQueue(&q_messageToMon, msgImg);
+            }
         }
-	
     }
 }
 
@@ -540,6 +554,26 @@ void Tasks::CameraClose() {   // FONCTIONALITE 16
         monitor.Write(new Message(MESSAGE_ANSWER_ACK));
         rt_mutex_release(&mutex_monitor);
 	}*/
+}
+
+void Tasks::FindArena() {
+    Img *img;
+    MessageImg *msgImg;
+    
+    CAN_SEND_IMG = 0;
+    rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+    img = new Img(camera->Grab());
+    rt_mutex_release(&mutex_camera);
+    arena = img.SearchArena();
+    if (arena->IsEmpty()) {
+        rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+        monitor.Write(new Message(MESSAGE_ANSWER_NACK));
+        rt_mutex_release(&mutex_monitor);
+    } else {
+        img.drawArena(arena);
+        msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
+        WriteInQueue(&q_messageToMon, msgImg);
+    }
 }
 
 
