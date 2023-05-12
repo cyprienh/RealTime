@@ -25,7 +25,7 @@
 #define PRIORITY_TSENDTOMON 22
 #define PRIORITY_TRECEIVEFROMMON 25
 #define PRIORITY_TSTARTROBOT 20
-#define PRIORITY_TCAMERA 26
+#define PRIORITY_TCAMERA 23
 #define PRIORITY_TCAMERAOPENCLOSE 27
 #define PRIORITY_TRELOADWD 28 // INSA
 #define PRIORITY_TBATTERY 15 // INSA
@@ -502,20 +502,19 @@ void Tasks::CameraSend(void *arg) { // FONCTIONALITE 15
         }
 
     while(1) {
+        rt_task_wait_period(NULL);
         rt_mutex_acquire(&mutex_camera, TM_INFINITE);
         open = camera->IsOpen();
-        rt_mutex_release(&mutex_camera);
+	rt_mutex_release(&mutex_camera);
         if (open) {
-            err = rt_task_wait_period(NULL);
-            if(err) {
-                printf("error task wait camera, %s\n ", strerror (-err));
-            }
+	  rt_mutex_acquire(&mutex_camera, TM_INFINITE);
             img = new Img(camera->Grab());
+	    rt_mutex_release(&mutex_camera);
             msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
             WriteInQueue(&q_messageToMon, msgImg);
         }
+	
     }
-    
 }
 
 
@@ -528,6 +527,8 @@ void Tasks::CameraClose() {   // FONCTIONALITE 16
     open = camera->IsOpen();
     rt_mutex_release(&mutex_camera);
 
+    printf("isopen? %d\n\n\n\n\n\n", open);
+    /*
     if (open) { 
         printf("\nclose failed!!!, %s\n");
         rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
@@ -538,7 +539,7 @@ void Tasks::CameraClose() {   // FONCTIONALITE 16
         rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
         monitor.Write(new Message(MESSAGE_ANSWER_ACK));
         rt_mutex_release(&mutex_monitor);
-    }
+	}*/
 }
 
 
