@@ -71,9 +71,14 @@ private:
     char WD_ON = 0;
     char COUNT_ERROR = 0;
     char CAN_SEND_IMG = 1;
+    char FIND_ROBOT = 0;
+
     Camera *camera = new Camera(sm, 5);
+
     Arena arena;
     Arena arena_temp;
+
+    std::list<Position> RobotList;
     
     /**********************************************************************/
     /* Tasks                                                              */

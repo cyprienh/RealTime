@@ -360,6 +360,10 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             Tasks::ArenaOK();
         } else if (msgRcv->CompareID(MESSAGE_CAM_ARENA_INFIRM)){
             Tasks::ArenaKO();
+        } else if (msgRcv->CompareID(MESSAGE_CAM_POSITION_COMPUTE_START)){
+            FIND_ROBOT = 1;
+        } else if (msgRcv->CompareID(MESSAGE_CAM_POSITION_COMPUTE_STOP)){
+            FIND_ROBOT = 0;
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_GO_FORWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_BACKWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_LEFT) ||
@@ -519,20 +523,24 @@ void Tasks::CameraSend(void *arg) { // FONCTIONALITE 15
         }
 
     while(1) {
-	rt_task_wait_period(NULL);
+	    rt_task_wait_period(NULL);
         if (CAN_SEND_IMG) {
             rt_mutex_acquire(&mutex_camera, TM_INFINITE);
             open = camera->IsOpen();
-	    rt_mutex_release(&mutex_camera);
+	        rt_mutex_release(&mutex_camera);
             if (open) {
-                rt_mutex_acquire(&mutex_camera, TM_INFINITE);
-                img = new Img(camera->Grab());
-                rt_mutex_release(&mutex_camera);
-                if (!arena.IsEmpty()) {
-                    img->DrawArena(arena);
+                if(FIND_ROBOT) {
+                    FindRobot();
+                } else {
+                    rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+                    img = new Img(camera->Grab());
+                    rt_mutex_release(&mutex_camera);
+                    if (!arena.IsEmpty()) {
+                        img->DrawArena(arena);
+                    }
+                    msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
+                    WriteInQueue(&q_messageToMon, msgImg);
                 }
-                msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
-                WriteInQueue(&q_messageToMon, msgImg);
             }
         }
     }
@@ -573,12 +581,12 @@ void Tasks::FindArena() {
     rt_mutex_release(&mutex_camera);
     arena_temp = img->SearchArena();
     if (arena_temp.IsEmpty()) {
-	printf("\nARENA NOT FOUND!\n");
+	    printf("\nARENA NOT FOUND!\n");
         rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
         monitor.Write(new Message(MESSAGE_ANSWER_NACK));
         rt_mutex_release(&mutex_monitor);
     } else {
-	printf("\nARENA FOUND!!!!!\n");
+	    printf("\nARENA FOUND!!!!!\n");
         img->DrawArena(arena_temp);
         msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
         WriteInQueue(&q_messageToMon, msgImg);
@@ -594,6 +602,29 @@ void Tasks::ArenaKO() {
     CAN_SEND_IMG = 1;
 }
 
+void Tasks::FindRobot() {
+    Img *img;
+    MessageImg *msgImg;
+    rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+    img = new Img(camera->Grab());
+    rt_mutex_release(&mutex_camera);
+    RobotList = img->SearchRobot(arena);
+    if (RobotList.empty()) {
+	    printf("\nROBOT NOT FOUND!\n");
+        rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+        monitor.Write(new MessagePosition());
+        rt_mutex_release(&mutex_monitor);
+    } else {
+	    printf("\nROBOT FOUND!!!!!\n");
+        rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+        for(Position p : RobotList)
+            monitor.Write(new MessagePosition(MESSAGE_CAM_POSITION, p));
+        rt_mutex_release(&mutex_monitor);
+        img->DrawAllRobots(RobotList);
+    }
+    msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
+    WriteInQueue(&q_messageToMon, msgImg);
+}
 
 
 /**
