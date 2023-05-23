@@ -337,8 +337,18 @@ void Tasks::ReceiveFromMonTask(void *arg) {
         msgRcv = monitor.Read();
         cout << "Rcv <= " << msgRcv->ToString() << endl << flush;
 
-        if (msgRcv->CompareID(MESSAGE_MONITOR_LOST)) {
-            delete(msgRcv);
+        if (msgRcv->CompareID(MESSAGE_MONITOR_LOST)) { // FONCTIONNALITE 6
+            cout << "Monitor is lost" << endl;
+            robotStarted = 0;
+            robot.Stop();
+
+            // Reset global variables
+            WD_ON = 0;
+            FIND_ROBOT = 0;
+            CAN_SEND_IMG = 1;
+            COUNT_ERROR = 0;
+
+            //delete(msgRcv);
             exit(-1);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_COM_OPEN)) {
             rt_sem_v(&sem_openComRobot);
