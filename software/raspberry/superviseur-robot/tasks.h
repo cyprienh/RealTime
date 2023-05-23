@@ -168,6 +168,7 @@ private:
     void FindArena();
     void ArenaOK();
     void ArenaKO();
+    void FindRobot();
 
     Message *checkComError(Message *msg);
     

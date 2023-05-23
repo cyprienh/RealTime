@@ -509,7 +509,7 @@ void Tasks::CameraOpen() {   // FONCTIONALITE 14
     }
 }
 
-void Tasks::CameraSend(void *arg) { // FONCTIONALITE 15
+void Tasks::CameraSend(void *arg) { // FONCTIONALITE 15 // 18
     Img *img;
     MessageImg *msgImg;
     int err, open;
@@ -621,6 +621,9 @@ void Tasks::FindRobot() {
             monitor.Write(new MessagePosition(MESSAGE_CAM_POSITION, p));
         rt_mutex_release(&mutex_monitor);
         img->DrawAllRobots(RobotList);
+    }
+    if (!arena.IsEmpty()) {
+        img->DrawArena(arena);
     }
     msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
     WriteInQueue(&q_messageToMon, msgImg);
