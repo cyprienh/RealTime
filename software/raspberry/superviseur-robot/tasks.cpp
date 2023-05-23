@@ -341,11 +341,11 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
             cout << "Monitor is lost" << endl;
             rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
-            robotStarted = 0.
+            robotStarted = 0;
             rt_mutex_release(&mutex_robotStarted);
 
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-            robot.Stop();
+            robot.Write(robot.Stop());
             rt_mutex_release(&mutex_robot);
 
             // Reset global variables
