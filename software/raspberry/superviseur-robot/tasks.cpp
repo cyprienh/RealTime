@@ -355,8 +355,8 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             COUNT_ERROR = 0;
 
             rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
-            monitor.Close();
-            monitor.Open(SERVER_PORT);
+            //monitor.Close();
+            //monitor.Open(SERVER_PORT);
             monitor.AcceptClient();
             rt_mutex_release(&mutex_monitor);
             //delete(msgRcv);
@@ -447,9 +447,11 @@ void Tasks::PeriodicReloadWD(void *arg) { // FONCTIONALITE 11
             printf("error task wait, %s\n ", strerror (-err));
             break;
         }
-        rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-        checkComError(robot.Write(robot.ReloadWD()));
-        rt_mutex_release(&mutex_robot);
+        if(WD_ON) {
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            checkComError(robot.Write(robot.ReloadWD()));
+            rt_mutex_release(&mutex_robot);
+        }
     }
 }
 
