@@ -346,6 +346,7 @@ void Tasks::ReceiveFromMonTask(void *arg) {
 
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
             robot.Write(robot.Stop());
+            robot.Write(robot.PowerOff());
             rt_mutex_release(&mutex_robot);
 
             // Reset global variables
