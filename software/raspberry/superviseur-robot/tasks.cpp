@@ -355,6 +355,8 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             COUNT_ERROR = 0;
 
             rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+            monitor.Close();
+            monitor.Open(SERVER_PORT);
             monitor.AcceptClient();
             rt_mutex_release(&mutex_monitor);
             //delete(msgRcv);
