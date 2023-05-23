@@ -338,9 +338,15 @@ void Tasks::ReceiveFromMonTask(void *arg) {
         cout << "Rcv <= " << msgRcv->ToString() << endl << flush;
 
         if (msgRcv->CompareID(MESSAGE_MONITOR_LOST)) { // FONCTIONNALITE 6
+            rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
             cout << "Monitor is lost" << endl;
-            robotStarted = 0;
+            rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+            robotStarted = 0.
+            rt_mutex_release(&mutex_robotStarted);
+
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
             robot.Stop();
+            rt_mutex_release(&mutex_robot);
 
             // Reset global variables
             WD_ON = 0;
@@ -348,6 +354,8 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             CAN_SEND_IMG = 1;
             COUNT_ERROR = 0;
 
+            monitor.AcceptClient();
+            rt_mutex_release(&mutex_monitor);
             //delete(msgRcv);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_COM_OPEN)) {
             rt_sem_v(&sem_openComRobot);
