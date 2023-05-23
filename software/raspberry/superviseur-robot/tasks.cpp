@@ -349,7 +349,6 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             COUNT_ERROR = 0;
 
             //delete(msgRcv);
-            exit(-1);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_COM_OPEN)) {
             rt_sem_v(&sem_openComRobot);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITHOUT_WD)) {
