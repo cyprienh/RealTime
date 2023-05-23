@@ -339,14 +339,18 @@ void Tasks::ReceiveFromMonTask(void *arg) {
 
         if (msgRcv->CompareID(MESSAGE_MONITOR_LOST)) { // FONCTIONNALITE 6
             cout << "Monitor is lost" << endl;
+            rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+
             rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
             robotStarted = 0;
             rt_mutex_release(&mutex_robotStarted);
-		rt_mutex_acquire(&mutex_camera, TM_INFINITE);
-		if(camera->IsOpen()) {
-			camera->Close();
-		}
-		rt_mutex_release(&mutex_camera);
+
+    		rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+	    	if(camera->IsOpen()) {
+		    	camera->Close();
+		    }
+		    rt_mutex_release(&mutex_camera);
+            
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
             robot.Write(robot.Stop());
             robot.Write(robot.PowerOff());
@@ -358,12 +362,6 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             CAN_SEND_IMG = 0;
             COUNT_ERROR = 0;
 
-            rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
-<<<<<<< HEAD
-            //monitor.Close();
-            //monitor.Open(SERVER_PORT);
-=======
->>>>>>> 27284f7cb3dfe47361fa0a6050b33bab42fce23a
             monitor.AcceptClient();
             rt_mutex_release(&mutex_monitor);
             //delete(msgRcv);
@@ -378,7 +376,7 @@ void Tasks::ReceiveFromMonTask(void *arg) {
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_BATTERY_GET)) {
             rt_sem_v(&sem_battery);
         } else if (msgRcv->CompareID(MESSAGE_CAM_OPEN)){
-		CAN_SEND_IMG = 1;
+		    CAN_SEND_IMG = 1;
             Tasks::CameraOpen();
         } else if (msgRcv->CompareID(MESSAGE_CAM_CLOSE)){
             Tasks::CameraClose();
